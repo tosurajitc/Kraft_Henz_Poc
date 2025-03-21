@@ -75,11 +75,24 @@ st.markdown("""
     .milestone-pending {
         color: red;
     }
+    .green-100 {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+    .green-50 {
+        background-color: #d4edda !important;
+    }
+    .amber {
+        background-color: #ffeeba !important;
+    }
+    .red {
+        background-color: #f8d7da !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Define the main dashboard function
 def main_dashboard(df):
+    """Main dashboard function displaying all project analytics"""
     if df is not None:
         # Get project names
         project_names = get_project_names(df)
@@ -103,12 +116,18 @@ def main_dashboard(df):
             
             with col3:
                 completed_dev = len(df[pd.notna(df['Dev Actual Delivery Date'])])
-                completion_percentage = round(completed_dev / total_developments * 100 if total_developments > 0 else 0, 1)
+                if total_developments > 0:
+                    completion_percentage = round(completed_dev / total_developments * 100, 1)
+                else:
+                    completion_percentage = 0
                 st.metric("Completed Developments", f"{completed_dev} ({completion_percentage}%)")
             
             with col4:
                 in_progress = len(df[(pd.notna(df['Dev Actual Start Date'])) & (pd.isna(df['Dev Actual Delivery Date']))])
-                in_progress_percentage = round(in_progress / total_developments * 100 if total_developments > 0 else 0, 1)
+                if total_developments > 0:
+                    in_progress_percentage = round(in_progress / total_developments * 100, 1)
+                else:
+                    in_progress_percentage = 0
                 st.metric("In Progress", f"{in_progress} ({in_progress_percentage}%)")
             
             # Projects overview
@@ -119,7 +138,31 @@ def main_dashboard(df):
             # Milestone table
             st.subheader("Project Milestones")
             milestone_df = create_milestone_table(df)
-            st.dataframe(milestone_df, use_container_width=True)
+            
+            # Define a function to color code the milestone cells
+            def color_milestone_cells(val):
+                if "%" not in str(val):
+                    return ""
+                
+                # Extract percentage value
+                try:
+                    percent_val = float(str(val).split('(')[-1].split('%')[0])
+                    
+                    if percent_val == 100:
+                        return 'background-color: #28a745; color: white'  # Green for 100%
+                    elif percent_val >= 50:
+                        return 'background-color: #d4edda'  # Light green for ≥50%
+                    elif percent_val > 0:
+                        return 'background-color: #ffeeba'  # Amber for >0% and <50%
+                    else:
+                        return 'background-color: #f8d7da'  # Red for 0%
+                except:
+                    return ""
+            
+            # Display the styled dataframe
+            display_cols = [col for col in milestone_df.columns if '%' not in col]  # Filter out percentage columns
+            styled_df = milestone_df[display_cols].style.applymap(color_milestone_cells)
+            st.dataframe(styled_df, use_container_width=True)
             
             # Overall charts
             st.subheader("Portfolio Analytics")
@@ -164,17 +207,26 @@ def main_dashboard(df):
                 
                 with col2:
                     completed = len(project_df[pd.notna(project_df['Dev Actual Delivery Date'])])
-                    completion_percentage = round(completed / total_items * 100 if total_items > 0 else 0, 1)
+                    if total_items > 0:
+                        completion_percentage = round(completed / total_items * 100, 1)
+                    else:
+                        completion_percentage = 0
                     st.metric("Completed", f"{completed} ({completion_percentage}%)")
                 
                 with col3:
                     in_progress = len(project_df[(pd.notna(project_df['Dev Actual Start Date'])) & (pd.isna(project_df['Dev Actual Delivery Date']))])
-                    in_progress_percentage = round(in_progress / total_items * 100 if total_items > 0 else 0, 1)
+                    if total_items > 0:
+                        in_progress_percentage = round(in_progress / total_items * 100, 1)
+                    else:
+                        in_progress_percentage = 0
                     st.metric("In Progress", f"{in_progress} ({in_progress_percentage}%)")
                 
                 with col4:
                     on_hold = len(project_df[pd.notna(project_df['ON Hold Reason'])])
-                    on_hold_percentage = round(on_hold / total_items * 100 if total_items > 0 else 0, 1)
+                    if total_items > 0:
+                        on_hold_percentage = round(on_hold / total_items * 100, 1)
+                    else:
+                        on_hold_percentage = 0
                     st.metric("On Hold", f"{on_hold} ({on_hold_percentage}%)")
                 
                 # Project charts in 3 sections
@@ -365,8 +417,8 @@ def main_dashboard(df):
                     
                     st.dataframe(deadline_df[available_deadline_columns], use_container_width=True)
 
-# Main execution starts here
 def main():
+    """Main application entry point handling data loading and UI setup"""
     # Sidebar for file upload and project selection
     st.sidebar.title("Project Analytics Dashboard")
     st.sidebar.image("https://img.icons8.com/color/96/000000/dashboard-layout.png", width=100)
@@ -408,12 +460,6 @@ def main():
         # Use data from session state
         df = st.session_state.data
 
-    # Check dataframe columns for debugging
-    if df is not None:
-        st.sidebar.write("### Available Columns")
-        with st.sidebar.expander("Show all columns in the dataset"):
-            st.write(list(df.columns))
-
     # GROQ AI Query Section in Sidebar
     st.sidebar.markdown("---")
     st.sidebar.subheader("Ask about your data")
@@ -454,15 +500,14 @@ if __name__ == "__main__":
             1. The column is named differently in your Excel file (e.g., 'Dev Lead ' with an extra space)
             2. The column doesn't exist in your Excel file
             
-            Check the column names shown in the sidebar and try uploading the file again.
+            Check the column names and try uploading the file again.
             """)
         
         # Show dataframe sample to help with debugging
         try:
-            if df is not None:
+            if 'df' in locals() and df is not None:
                 with st.expander("Show data sample for debugging"):
                     st.write("First 5 rows of the dataset:")
                     st.dataframe(df.head())
-        except NameError:
-            # df variable doesn't exist at all
+        except Exception:
             pass

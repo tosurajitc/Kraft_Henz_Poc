@@ -372,15 +372,31 @@ def create_milestone_table(df):
         pi_completed = len(project_df[pd.notna(project_df['PI Actual Delivery Date'])])
         fut_completed = len(project_df[project_df['FUT Status'] == 'Completed'])
         
+        # Calculate percentages
+        fsd_received_pct = round(fsd_received/total*100 if total > 0 else 0, 1)
+        fsd_walkthrough_pct = round(fsd_walkthrough/total*100 if total > 0 else 0, 1)
+        dev_started_pct = round(dev_started/total*100 if total > 0 else 0, 1)
+        dev_completed_pct = round(dev_completed/total*100 if total > 0 else 0, 1)
+        abap_completed_pct = round(abap_completed/total*100 if total > 0 else 0, 1)
+        pi_completed_pct = round(pi_completed/total*100 if total > 0 else 0, 1)
+        fut_completed_pct = round(fut_completed/total*100 if total > 0 else 0, 1)
+        
         milestone_data.append({
             'Project Name': project,
-            'FSD Received': f"{fsd_received}/{total} ({round(fsd_received/total*100 if total > 0 else 0, 1)}%)",
-            'FSD Walkthrough': f"{fsd_walkthrough}/{total} ({round(fsd_walkthrough/total*100 if total > 0 else 0, 1)}%)",
-            'Dev Started': f"{dev_started}/{total} ({round(dev_started/total*100 if total > 0 else 0, 1)}%)",
-            'Dev Completed': f"{dev_completed}/{total} ({round(dev_completed/total*100 if total > 0 else 0, 1)}%)",
-            'ABAP Completed': f"{abap_completed}/{total} ({round(abap_completed/total*100 if total > 0 else 0, 1)}%)",
-            'PI Completed': f"{pi_completed}/{total} ({round(pi_completed/total*100 if total > 0 else 0, 1)}%)",
-            'FUT Completed': f"{fut_completed}/{total} ({round(fut_completed/total*100 if total > 0 else 0, 1)}%)"
+            'FSD Received': f"{fsd_received}/{total} ({fsd_received_pct}%)",
+            'FSD Received %': fsd_received_pct,
+            'FSD Walkthrough': f"{fsd_walkthrough}/{total} ({fsd_walkthrough_pct}%)",
+            'FSD Walkthrough %': fsd_walkthrough_pct,
+            'Dev Started': f"{dev_started}/{total} ({dev_started_pct}%)",
+            'Dev Started %': dev_started_pct,
+            'Dev Completed': f"{dev_completed}/{total} ({dev_completed_pct}%)",
+            'Dev Completed %': dev_completed_pct,
+            'ABAP Completed': f"{abap_completed}/{total} ({abap_completed_pct}%)",
+            'ABAP Completed %': abap_completed_pct,
+            'PI Completed': f"{pi_completed}/{total} ({pi_completed_pct}%)",
+            'PI Completed %': pi_completed_pct,
+            'FUT Completed': f"{fut_completed}/{total} ({fut_completed_pct}%)",
+            'FUT Completed %': fut_completed_pct
         })
     
     milestone_df = pd.DataFrame(milestone_data)
