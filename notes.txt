@@ -1,0 +1,182 @@
+create virtual environment: python -m venv .venv
+Activate virtual environment: .venv\scripts\activate
+How to activate .env file: pip install python-dotenv then from dotenv import load_dotenv then add this function load_dotenv()  # Load variables from .env into the environment
+Run the requirement.txt file: pip install -r requirements.txt
+create requirement.txt file: pip freeze > requirements.txt
+to run the program : streamlit run main.py
+
+GIT PUSH Steps: 
+In the terminal, initialize a new Git repository: git init
+Add all files in your folder to the staging area: git add .
+Commit the files with a message: git commit -m "Initial commit"
+Link your local repository to the GitHub repository you mentioned: git remote add origin https://github.com/tosurajitc/Kraft_Henz_Poc.git
+
+if error: remote origin already exists. - then git remote -v and then git remote rename origin old-origin and after that retry previous step.
+Push the changes to the remote repository: git push -u origin master
+
+https://github.ibm.com/IBM-AI-Automation/GR-Operations.git
+
+Project Structure: To run the program from bash: python main.py --ui
+
+dgft_monitoring/
+│
+├── .env                            # Configuration file with credentials and settings
+├── requirements.txt                # Dependencies
+├── main.py                         # Main application entry point
+├── app.py                          # Streamlit interface
+│
+├── agents/
+│   ├── __init__.py
+│   ├── web_scraper.py              # Agent for web scraping DGFT site
+│   ├── ocr_processor.py            # Agent for OCR processing
+│   ├── llm_analyzer.py             # Agent for LLM analysis using GROQ
+│   ├── email_notifier.py           # Module for email notifications
+│   └── gdrive_storage.py           # Module for Google Drive storage
+│
+└── utils/
+    ├── __init__.py
+    └── common.py                   # Common utility functions
+
+
+Check OCR program: python simple_ocr_test.py "C:\@Official\Automation\Notification 61 dated 07.03.2025 -English.pdf"
+
+=====================================================================================================
+deepseek-r1-distill-llama-70b
+deepseek-r1-distill-qwen-32b
+distil-whisper-large-v3-en
+gemma2-9b-it	30
+llama-3.1-8b-instant
+llama-3.2-1b-preview
+llama-3.2-3b-preview
+llama-3.2-11b-vision-preview
+llama-3.2-90b-vision-preview
+llama-3.3-70b-specdec
+llama-3.3-70b-versatile
+llama-guard-3-8b
+llama3-8b-8192
+llama3-70b-8192
+mistral-saba-24b
+qwen-2.5-32b	30
+qwen-2.5-coder-32b
+qwen-qwq-32b
+whisper-large-v3
+whisper-large-v3-turbo 
+
+======================================================================================================
+Web Agent
+The web agent is responsible for:
+
+Connecting to the DGFT portal
+Navigating through different sections (Notifications, Public Notices, Circulars)
+Extracting document metadata including dates, descriptions, and attachment links
+Downloading PDF attachments
+
+The agent uses Selenium for web automation and handles various error conditions.
+PDF Agent
+The PDF agent processes and analyzes PDF documents:
+
+Extracts text using PyPDF2 for text-based PDFs
+Falls back to OCR using Tesseract for image-based PDFs
+Analyzes content using GROQ LLM to generate summaries
+Handles file conversions and text processing
+
+Email Agent
+The email agent sends notifications:
+
+Composes formatted HTML emails with document details
+Attaches PDF files
+Sends emails via SMTP
+Handles authentication and error conditions
+
+Query Agent
+The query agent interprets natural language queries:
+
+Processes user queries using GROQ LLM or rule-based fallbacks
+Extracts search parameters (document type, date range, keywords)
+Filters documents based on query parameters
+Returns matching documents ranked by relevance
+
+Data Handler
+The data handler manages document data:
+
+Stores and retrieves document metadata
+Manages processed documents with OCR text and analysis
+Persists data to disk for durability
+Provides document search and filtering
+
+Configuration System
+The configuration system:
+
+Loads environment variables from .env file
+Validates configuration values
+Provides configuration status and error reporting
+Makes configuration available to all components
+
+Additional Features
+Command-Line Interface
+The system includes a comprehensive CLI for automation and integration with other systems:
+
+Fetch updates via scheduled jobs
+Process documents in batch mode
+Send automated notifications
+Run queries programmatically
+
+Error Handling and Logging
+The system includes robust error handling and logging:
+
+Detailed logging of all operations
+Fallbacks for API failures
+Graceful degradation when components are unavailable
+
+Data Persistence
+The system persists data to ensure durability:
+
+Saves document metadata to JSON files
+Stores processed documents with OCR text and analysis
+Maintains state between runs
+
+Future Enhancements
+Potential enhancements for the system include:
+
+Multi-user support - Add authentication and user-specific preferences
+Additional document sources - Extend to monitor other regulatory websites
+Advanced analytics - Track changes in regulations over time
+Document comparison - Highlight differences between versions
+Automated tagging - Use AI to categorize documents by topic
+Mobile notifications - Add push notifications via mobile app
+Improved OCR - Enhance OCR with custom models for regulatory documents
+API integration - Provide REST API for integrating with other systems
+
+Troubleshooting
+Common Issues
+
+Web scraping failures
+
+Check if the DGFT website structure has changed
+Update the web agent selectors if needed
+Try increasing wait times for slow connections
+
+
+OCR issues
+
+Verify Tesseract is properly installed
+Check OCR language settings
+Increase DPI for better text recognition
+
+
+Email sending failures
+
+Verify SMTP settings
+Check if app password is correct
+Ensure less secure app access is enabled for the sender account
+
+
+GROQ API errors
+
+Verify API key is valid
+Check for usage limits
+Ensure model name is correct
+
+
+
+For any other issues, check the application logs in app.log for detailed error messages.
