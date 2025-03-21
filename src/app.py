@@ -88,6 +88,23 @@ st.markdown("""
     .red {
         background-color: #f8d7da !important;
     }
+    .nav-container {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+    .nav-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-right: 20px;
+    }
+    .divider {
+        border-top: 1px solid #e9ecef;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -97,11 +114,30 @@ def main_dashboard(df):
         # Get project names
         project_names = get_project_names(df)
         
-        # Landing Page Tab
-        tabs = st.tabs(["Overview"] + project_names)
+        # Create navigation options
+        nav_options = ["Overview"] + project_names
         
-        # Overview Tab
-        with tabs[0]:
+        # Create top navigation menu
+        st.markdown('<div class="nav-container">', unsafe_allow_html=True)
+        col1, col2 = st.columns([1, 3])
+        
+        with col1:
+            st.markdown('<span class="nav-title">Navigation:</span>', unsafe_allow_html=True)
+        
+        with col2:
+            selected_nav = st.selectbox(
+                "",
+                options=nav_options,
+                index=0,
+                key="navigation_menu",
+                label_visibility="collapsed"
+            )
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Display content based on the selected option
+        if selected_nav == "Overview":
+            # Overview Tab
             st.title("Project Portfolio Overview")
             
             # Top metrics
@@ -190,232 +226,231 @@ def main_dashboard(df):
                              color='Count',
                              color_continuous_scale='Viridis')
                 st.plotly_chart(fig2, use_container_width=True)
-        
-        # Project-specific tabs
-        for i, project_name in enumerate(project_names, 1):
-            with tabs[i]:
-                project_df = filter_data_by_project(df, project_name)
+        else:
+            # Project-specific tab
+            project_name = selected_nav
+            project_df = filter_data_by_project(df, project_name)
+            
+            st.title(f"{project_name} Dashboard")
+            
+            # Project metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_items = len(project_df)
+                st.metric("Total Developments", total_items)
+            
+            with col2:
+                completed = len(project_df[pd.notna(project_df['Dev Actual Delivery Date'])])
+                if total_items > 0:
+                    completion_percentage = round(completed / total_items * 100, 1)
+                else:
+                    completion_percentage = 0
+                st.metric("Completed", f"{completed} ({completion_percentage}%)")
+            
+            with col3:
+                in_progress = len(project_df[(pd.notna(project_df['Dev Actual Start Date'])) & (pd.isna(project_df['Dev Actual Delivery Date']))])
+                if total_items > 0:
+                    in_progress_percentage = round(in_progress / total_items * 100, 1)
+                else:
+                    in_progress_percentage = 0
+                st.metric("In Progress", f"{in_progress} ({in_progress_percentage}%)")
+            
+            with col4:
+                on_hold = len(project_df[pd.notna(project_df['ON Hold Reason'])])
+                if total_items > 0:
+                    on_hold_percentage = round(on_hold / total_items * 100, 1)
+                else:
+                    on_hold_percentage = 0
+                st.metric("On Hold", f"{on_hold} ({on_hold_percentage}%)")
+            
+            # Project charts in 3 sections
+            project_tabs = st.tabs(["Dev Types & Process Areas", "Project Status", "Gantt Chart"])
+            
+            # Dev Types and Process Areas
+            with project_tabs[0]:
+                col1, col2 = st.columns(2)
                 
-                st.title(f"{project_name} Dashboard")
+                with col1:
+                    # Dev Type pie chart
+                    dev_type_fig = create_dev_type_pie_chart(df, project_name)
+                    st.plotly_chart(dev_type_fig, use_container_width=True)
                 
-                # Project metrics
+                with col2:
+                    # Process Area pie chart
+                    process_area_fig = create_process_area_pie_chart(df, project_name)
+                    st.plotly_chart(process_area_fig, use_container_width=True)
+                
+                # Stage bar chart
+                stage_fig = create_stage_bar_chart(df, project_name)
+                st.plotly_chart(stage_fig, use_container_width=True)
+            
+            # Project Status Table
+            with project_tabs[1]:
+                st.subheader("Project Status Details")
+                
+                # Filters for project status
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    total_items = len(project_df)
-                    st.metric("Total Developments", total_items)
+                    sprint_options = ["All"] + sorted(project_df['Sprint'].dropna().unique().tolist())
+                    selected_sprint = st.selectbox("Sprint", sprint_options, key=f"status_sprint_{project_name}")
+                    sprint_filter = None if selected_sprint == "All" else selected_sprint
                 
                 with col2:
-                    completed = len(project_df[pd.notna(project_df['Dev Actual Delivery Date'])])
-                    if total_items > 0:
-                        completion_percentage = round(completed / total_items * 100, 1)
-                    else:
-                        completion_percentage = 0
-                    st.metric("Completed", f"{completed} ({completion_percentage}%)")
+                    dev_name_filter = st.text_input("Development Name Contains", key=f"status_dev_{project_name}")
                 
                 with col3:
-                    in_progress = len(project_df[(pd.notna(project_df['Dev Actual Start Date'])) & (pd.isna(project_df['Dev Actual Delivery Date']))])
-                    if total_items > 0:
-                        in_progress_percentage = round(in_progress / total_items * 100, 1)
-                    else:
-                        in_progress_percentage = 0
-                    st.metric("In Progress", f"{in_progress} ({in_progress_percentage}%)")
+                    stage_options = ["All"] + sorted(project_df['Stage'].dropna().unique().tolist())
+                    selected_stage = st.selectbox("Stage", stage_options, key=f"status_stage_{project_name}")
+                    stage_filter = None if selected_stage == "All" else selected_stage
                 
                 with col4:
-                    on_hold = len(project_df[pd.notna(project_df['ON Hold Reason'])])
-                    if total_items > 0:
-                        on_hold_percentage = round(on_hold / total_items * 100, 1)
-                    else:
-                        on_hold_percentage = 0
-                    st.metric("On Hold", f"{on_hold} ({on_hold_percentage}%)")
+                    complexity_options = ["All"] + sorted(project_df['Complexity'].dropna().unique().tolist())
+                    selected_complexity = st.selectbox("Complexity", complexity_options, key=f"status_complexity_{project_name}")
+                    complexity_filter = None if selected_complexity == "All" else selected_complexity
                 
-                # Project charts in 3 sections
-                project_tabs = st.tabs(["Dev Types & Process Areas", "Project Status", "Gantt Chart"])
+                # Create and display status table
+                status_table = create_project_status_table(
+                    df, 
+                    project_name, 
+                    sprint=sprint_filter, 
+                    dev_name=dev_name_filter if dev_name_filter else None, 
+                    stage=stage_filter, 
+                    complexity=complexity_filter
+                )
+                st.dataframe(status_table, use_container_width=True)
                 
-                # Dev Types and Process Areas
-                with project_tabs[0]:
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # Dev Type pie chart
-                        dev_type_fig = create_dev_type_pie_chart(df, project_name)
-                        st.plotly_chart(dev_type_fig, use_container_width=True)
-                    
-                    with col2:
-                        # Process Area pie chart
-                        process_area_fig = create_process_area_pie_chart(df, project_name)
-                        st.plotly_chart(process_area_fig, use_container_width=True)
-                    
-                    # Stage bar chart
-                    stage_fig = create_stage_bar_chart(df, project_name)
-                    st.plotly_chart(stage_fig, use_container_width=True)
+                # Development details table with filtered data
+                st.subheader("Development Items")
+                filtered_project_df = project_df.copy()
                 
-                # Project Status Table
-                with project_tabs[1]:
-                    st.subheader("Project Status Details")
-                    
-                    # Filters for project status
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        sprint_options = ["All"] + sorted(project_df['Sprint'].dropna().unique().tolist())
-                        selected_sprint = st.selectbox("Sprint", sprint_options, key=f"status_sprint_{project_name}")
-                        sprint_filter = None if selected_sprint == "All" else selected_sprint
-                    
-                    with col2:
-                        dev_name_filter = st.text_input("Development Name Contains", key=f"status_dev_{project_name}")
-                    
-                    with col3:
-                        stage_options = ["All"] + sorted(project_df['Stage'].dropna().unique().tolist())
-                        selected_stage = st.selectbox("Stage", stage_options, key=f"status_stage_{project_name}")
-                        stage_filter = None if selected_stage == "All" else selected_stage
-                    
-                    with col4:
-                        complexity_options = ["All"] + sorted(project_df['Complexity'].dropna().unique().tolist())
-                        selected_complexity = st.selectbox("Complexity", complexity_options, key=f"status_complexity_{project_name}")
-                        complexity_filter = None if selected_complexity == "All" else selected_complexity
-                    
-                    # Create and display status table
-                    status_table = create_project_status_table(
-                        df, 
-                        project_name, 
-                        sprint=sprint_filter, 
-                        dev_name=dev_name_filter if dev_name_filter else None, 
-                        stage=stage_filter, 
-                        complexity=complexity_filter
-                    )
-                    st.dataframe(status_table, use_container_width=True)
-                    
-                    # Development details table with filtered data
-                    st.subheader("Development Items")
-                    filtered_project_df = project_df.copy()
-                    
-                    if sprint_filter:
-                        filtered_project_df = filtered_project_df[filtered_project_df['Sprint'] == sprint_filter]
-                    if dev_name_filter:
-                        filtered_project_df = filtered_project_df[filtered_project_df['FSD / Development Name'].str.contains(dev_name_filter, na=False)]
-                    if stage_filter:
-                        filtered_project_df = filtered_project_df[filtered_project_df['Stage'] == stage_filter]
-                    if complexity_filter:
-                        filtered_project_df = filtered_project_df[filtered_project_df['Complexity'] == complexity_filter]
-                    
-                    # Select important columns to display - handle variations in column names
-                    display_columns = []
-                    
-                    # Add core columns if they exist
-                    for col_name in ['Development ID', 'FSD / Development Name', 'Stage', 'Process Area', 'Complexity', 'Priority of Delivery']:
-                        if col_name in filtered_project_df.columns:
-                            display_columns.append(col_name)
-                    
-                    # Handle Dev Lead column variations
-                    dev_lead_col = None
-                    if 'Dev Lead' in filtered_project_df.columns:
-                        dev_lead_col = 'Dev Lead'
-                    elif 'Dev Lead ' in filtered_project_df.columns:  # Note the space
-                        dev_lead_col = 'Dev Lead '
-                    else:
-                        # Try to find a column that contains "Dev Lead"
-                        dev_lead_cols = [col for col in filtered_project_df.columns if 'Dev Lead' in col]
-                        if dev_lead_cols:
-                            dev_lead_col = dev_lead_cols[0]
-                    
-                    if dev_lead_col:
-                        display_columns.append(dev_lead_col)
-                    
-                    # Add date and status columns if they exist
-                    date_status_cols = [
-                        'Dev Planned Delivery Date', 'Dev Actual Delivery Date', 
-                        'ABAP Status', 'PI Status', 'FUT Status'
-                    ]
-                    
-                    for col in date_status_cols:
-                        if col in filtered_project_df.columns:
-                            display_columns.append(col)
-                    
-                    # Only show available columns
-                    available_columns = display_columns
-                    
-                    st.dataframe(filtered_project_df[available_columns], use_container_width=True)
+                if sprint_filter:
+                    filtered_project_df = filtered_project_df[filtered_project_df['Sprint'] == sprint_filter]
+                if dev_name_filter:
+                    filtered_project_df = filtered_project_df[filtered_project_df['FSD / Development Name'].str.contains(dev_name_filter, na=False)]
+                if stage_filter:
+                    filtered_project_df = filtered_project_df[filtered_project_df['Stage'] == stage_filter]
+                if complexity_filter:
+                    filtered_project_df = filtered_project_df[filtered_project_df['Complexity'] == complexity_filter]
                 
-                # Gantt Chart
-                with project_tabs[2]:
-                    st.subheader("Project Timeline")
-                    
-                    # Filters for Gantt chart
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        gantt_sprint_options = ["All"] + sorted(project_df['Sprint'].dropna().unique().tolist())
-                        gantt_selected_sprint = st.selectbox("Sprint", gantt_sprint_options, key=f"gantt_sprint_{project_name}")
-                        gantt_sprint_filter = None if gantt_selected_sprint == "All" else gantt_selected_sprint
-                    
-                    with col2:
-                        gantt_stage_options = ["All"] + sorted(project_df['Stage'].dropna().unique().tolist())
-                        gantt_selected_stage = st.selectbox("Stage", gantt_stage_options, key=f"gantt_stage_{project_name}")
-                        gantt_stage_filter = None if gantt_selected_stage == "All" else gantt_selected_stage
-                    
-                    with col3:
-                        # Handle case where Dev Lead column might be named differently
-                        try:
-                            if 'Dev Lead' in project_df.columns:
-                                dev_lead_col = 'Dev Lead'
-                            elif 'Dev Lead ' in project_df.columns:  # Note the space
-                                dev_lead_col = 'Dev Lead '
-                            else:
-                                # Try to find a column that contains "Dev Lead"
-                                dev_lead_cols = [col for col in project_df.columns if 'Dev Lead' in col]
-                                dev_lead_col = dev_lead_cols[0] if dev_lead_cols else None
-                            
-                            if dev_lead_col:
-                                gantt_lead_options = ["All"] + sorted(project_df[dev_lead_col].dropna().unique().tolist())
-                                gantt_selected_lead = st.selectbox("Dev Lead", gantt_lead_options, key=f"gantt_lead_{project_name}")
-                                gantt_lead_filter = None if gantt_selected_lead == "All" else gantt_selected_lead
-                            else:
-                                st.text("Dev Lead column not found")
-                                gantt_lead_filter = None
-                        except Exception as e:
-                            st.warning(f"Could not load Dev Lead options: {str(e)}")
+                # Select important columns to display - handle variations in column names
+                display_columns = []
+                
+                # Add core columns if they exist
+                for col_name in ['Development ID', 'FSD / Development Name', 'Stage', 'Process Area', 'Complexity', 'Priority of Delivery']:
+                    if col_name in filtered_project_df.columns:
+                        display_columns.append(col_name)
+                
+                # Handle Dev Lead column variations
+                dev_lead_col = None
+                if 'Dev Lead' in filtered_project_df.columns:
+                    dev_lead_col = 'Dev Lead'
+                elif 'Dev Lead ' in filtered_project_df.columns:  # Note the space
+                    dev_lead_col = 'Dev Lead '
+                else:
+                    # Try to find a column that contains "Dev Lead"
+                    dev_lead_cols = [col for col in filtered_project_df.columns if 'Dev Lead' in col]
+                    if dev_lead_cols:
+                        dev_lead_col = dev_lead_cols[0]
+                
+                if dev_lead_col:
+                    display_columns.append(dev_lead_col)
+                
+                # Add date and status columns if they exist
+                date_status_cols = [
+                    'Dev Planned Delivery Date', 'Dev Actual Delivery Date', 
+                    'ABAP Status', 'PI Status', 'FUT Status'
+                ]
+                
+                for col in date_status_cols:
+                    if col in filtered_project_df.columns:
+                        display_columns.append(col)
+                
+                # Only show available columns
+                available_columns = display_columns
+                
+                st.dataframe(filtered_project_df[available_columns], use_container_width=True)
+            
+            # Gantt Chart
+            with project_tabs[2]:
+                st.subheader("Project Timeline")
+                
+                # Filters for Gantt chart
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    gantt_sprint_options = ["All"] + sorted(project_df['Sprint'].dropna().unique().tolist())
+                    gantt_selected_sprint = st.selectbox("Sprint", gantt_sprint_options, key=f"gantt_sprint_{project_name}")
+                    gantt_sprint_filter = None if gantt_selected_sprint == "All" else gantt_selected_sprint
+                
+                with col2:
+                    gantt_stage_options = ["All"] + sorted(project_df['Stage'].dropna().unique().tolist())
+                    gantt_selected_stage = st.selectbox("Stage", gantt_stage_options, key=f"gantt_stage_{project_name}")
+                    gantt_stage_filter = None if gantt_selected_stage == "All" else gantt_selected_stage
+                
+                with col3:
+                    # Handle case where Dev Lead column might be named differently
+                    try:
+                        if 'Dev Lead' in project_df.columns:
+                            dev_lead_col = 'Dev Lead'
+                        elif 'Dev Lead ' in project_df.columns:  # Note the space
+                            dev_lead_col = 'Dev Lead '
+                        else:
+                            # Try to find a column that contains "Dev Lead"
+                            dev_lead_cols = [col for col in project_df.columns if 'Dev Lead' in col]
+                            dev_lead_col = dev_lead_cols[0] if dev_lead_cols else None
+                        
+                        if dev_lead_col:
+                            gantt_lead_options = ["All"] + sorted(project_df[dev_lead_col].dropna().unique().tolist())
+                            gantt_selected_lead = st.selectbox("Dev Lead", gantt_lead_options, key=f"gantt_lead_{project_name}")
+                            gantt_lead_filter = None if gantt_selected_lead == "All" else gantt_selected_lead
+                        else:
+                            st.text("Dev Lead column not found")
                             gantt_lead_filter = None
-                    
-                    # Create and display Gantt chart
-                    gantt_fig = create_gantt_chart(
-                        df, 
-                        project_name, 
-                        sprint=gantt_sprint_filter, 
-                        stage=gantt_stage_filter, 
-                        dev_lead=gantt_lead_filter
-                    )
-                    
-                    if gantt_fig:
-                        st.plotly_chart(gantt_fig, use_container_width=True)
-                    else:
-                        st.warning("No timeline data available with the selected filters.")
-                    
-                    # Show deadline information
-                    st.subheader("Development Deadlines")
-                    
-                    deadline_df = project_df.copy()
-                    
-                    if gantt_sprint_filter:
-                        deadline_df = deadline_df[deadline_df['Sprint'] == gantt_sprint_filter]
-                    if gantt_stage_filter:
-                        deadline_df = deadline_df[deadline_df['Stage'] == gantt_stage_filter]
-                    if gantt_lead_filter and dev_lead_col:
-                        deadline_df = deadline_df[deadline_df[dev_lead_col] == gantt_lead_filter]
-                    
-                    # Select and display deadline information
-                    deadline_columns = [
-                        'Development ID', 'FSD / Development Name',
-                        'Dev Planned Start Date', 'Dev Planned Delivery Date', 
-                        'Dev Actual Start Date', 'Dev Actual Delivery Date',
-                        'ABAP Planned Delivery Date', 'ABAP Actual Delivery Date',
-                        'PI Planned Delivery Date', 'PI Actual Delivery Date'
-                    ]
-                    
-                    # Only show available columns that exist in the dataframe
-                    available_deadline_columns = [col for col in deadline_columns if col in deadline_df.columns]
-                    
-                    st.dataframe(deadline_df[available_deadline_columns], use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not load Dev Lead options: {str(e)}")
+                        gantt_lead_filter = None
+                
+                # Create and display Gantt chart
+                gantt_fig = create_gantt_chart(
+                    df, 
+                    project_name, 
+                    sprint=gantt_sprint_filter, 
+                    stage=gantt_stage_filter, 
+                    dev_lead=gantt_lead_filter
+                )
+                
+                if gantt_fig:
+                    st.plotly_chart(gantt_fig, use_container_width=True)
+                else:
+                    st.warning("No timeline data available with the selected filters.")
+                
+                # Show deadline information
+                st.subheader("Development Deadlines")
+                
+                deadline_df = project_df.copy()
+                
+                if gantt_sprint_filter:
+                    deadline_df = deadline_df[deadline_df['Sprint'] == gantt_sprint_filter]
+                if gantt_stage_filter:
+                    deadline_df = deadline_df[deadline_df['Stage'] == gantt_stage_filter]
+                if gantt_lead_filter and dev_lead_col:
+                    deadline_df = deadline_df[deadline_df[dev_lead_col] == gantt_lead_filter]
+                
+                # Select and display deadline information
+                deadline_columns = [
+                    'Development ID', 'FSD / Development Name',
+                    'Dev Planned Start Date', 'Dev Planned Delivery Date', 
+                    'Dev Actual Start Date', 'Dev Actual Delivery Date',
+                    'ABAP Planned Delivery Date', 'ABAP Actual Delivery Date',
+                    'PI Planned Delivery Date', 'PI Actual Delivery Date'
+                ]
+                
+                # Only show available columns that exist in the dataframe
+                available_deadline_columns = [col for col in deadline_columns if col in deadline_df.columns]
+                
+                st.dataframe(deadline_df[available_deadline_columns], use_container_width=True)
 
 def main():
     """Main application entry point handling data loading and UI setup"""
